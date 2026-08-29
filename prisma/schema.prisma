@@ -12,3 +12,22 @@ datasource db {
   url      = env("DATABASE_URL")
 
 }
+
+// ------- my code: Comment model backing the /api/comments endpoints -------
+
+model Comment {
+  id String @id @default(auto()) @map("_id") @db.ObjectId
+
+  name    String
+  email   String
+  comment String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // GET /api/comments always reads newest-first, so index createdAt descending to keep that query 
+  // and its skip/take pagination off a collection scan.
+  @@index([createdAt(sort: Desc)])
+}
+
+// ------- end my code -------
