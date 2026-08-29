@@ -3,6 +3,15 @@
 import { FormEvent, useState } from "react";
 import axios from "axios";
 
+/* ------- my code: shape of the 400 body POST /api/comments returns ------- */
+
+type CommentErrorResponse = {
+    error?: string;
+    fields?: Record<string, string[]>;
+};
+
+/* ------- end my code ------- */
+
 export default function TestForm(){
     const [name, setName] = useState("");
     const [email, setEmail] = useState("");
@@ -12,8 +21,12 @@ export default function TestForm(){
 
     async function postComment(e: FormEvent){
         e.preventDefault();
+        // I fix a small bug here
+        // change from setError("All fields are required.") to setError(...) followed by return
+        // it flagged the error and then posted the empty comment anyway
         if(!name || !email || !comment){
             setError("All fields are required.")
+            return;
         }
         try {
             const response = await axios.post("http://localhost:3000/api/comments", {
@@ -22,7 +35,8 @@ export default function TestForm(){
                 comment: comment,
             });
 
-            if(response.status == 200){
+            // change from response.status == 200 to response.status == 201
+            if(response.status == 201){
                 setError("");
                 setName("");
                 setEmail("");
@@ -31,6 +45,24 @@ export default function TestForm(){
             }
         } catch (err) {
             console.error(err);
+
+            /* ------- my code: show the per-field messages the API sends with a 400 ------- */
+
+            // User's fault, not our fault, so tell them to fix
+            if (axios.isAxiosError(err) && err.response?.status === 400) {
+                const { fields } = err.response.data as CommentErrorResponse;
+                const messages = Object.values(fields ?? {}).flat();
+
+                setError(
+                    messages.length > 0
+                        ? messages.join("  ")
+                        : "Please check your comment and try again.",
+                );
+                return;
+            }
+
+            /* ------- end my code ------- */
+
             setError("Something went wrong.  Please try again later.")
         }
     }
